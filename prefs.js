@@ -145,6 +145,8 @@ class ShortcutRow extends Adw.ActionRow {
             justify: Gtk.Justification.CENTER,
         }));
 
+        let pendingSuper = null;
+
         const controller = new Gtk.EventControllerKey();
         controller.connect('key-pressed', (_c, keyval, keycode, state) => {
             let mask = state & Gtk.accelerator_get_default_mod_mask();
@@ -159,6 +161,14 @@ class ShortcutRow extends Adw.ActionRow {
                 dialog.close();
                 return Gdk.EVENT_STOP;
             }
+
+            if ((keyval === Gdk.KEY_Super_L || keyval === Gdk.KEY_Super_R) && mask === 0) {
+                pendingSuper = keyval;
+                return Gdk.EVENT_STOP;
+            }
+
+            pendingSuper = null;
+
             if (isModifier(keyval) || mask === 0)
                 return Gdk.EVENT_STOP;
 
@@ -167,6 +177,17 @@ class ShortcutRow extends Adw.ActionRow {
             dialog.close();
             return Gdk.EVENT_STOP;
         });
+
+        controller.connect('key-released', (_c, keyval) => {
+            if (pendingSuper && (keyval === Gdk.KEY_Super_L || keyval === Gdk.KEY_Super_R)) {
+                const accel = keyval === Gdk.KEY_Super_R ? 'Super_R' : 'Super_L';
+                this._settings.set_strv(this._key, [accel]);
+                dialog.close();
+                return Gdk.EVENT_STOP;
+            }
+            return Gdk.EVENT_PROPAGATE;
+        });
+
         dialog.add_controller(controller);
         dialog.present();
     }
